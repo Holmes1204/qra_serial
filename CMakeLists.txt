@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   actor_1.msg
+  leg.msg
 )
 
 generate_messages(

@@ -10,30 +10,28 @@
  */
 #include <qra_serial.h>
 #include <iostream>
-const uint8_t ender[2] = {0x0d, 0x0a}; //定义消息头
-const uint8_t header[2] = {0x55, 0xaa};
-
-serial::Serial sp;
 
 
+serial::Serial sp[2];
+const uint8_t HEADER[2] = {0x55, 0xaa};
 
-int Serial_Init(const std::string &port,uint32_t baud_rate) //串口初始化
+int Serial_Init(int num,const std::string port,const uint32_t baud_rate) //串口初始化
 {
     //创建timeout
     static serial::Timeout time_out = serial::Timeout::simpleTimeout(100);
     //static do not release time_out until the code finish
     //设置要打开的串口名称
-    sp.setPort(port);
+    sp[num].setPort(port);
     //设置串口通信的波特率
-    sp.setBaudrate(baud_rate);
+    sp[num].setBaudrate(baud_rate);
     //串口设置timeout
-    sp.setTimeout(time_out);
+    sp[num].setTimeout(time_out);
     try
     {
         //打开串口
-        sp.open();
+        sp[num].open();
         //判断串口是否打开成功
-        if (sp.isOpen())
+        if (sp[num].isOpen())
         {
             //ROS_INFO_STREAM(port<<" is open"<<std::endl);
             std::cout << "port: " << port << " is open" << std::endl;
@@ -54,23 +52,23 @@ int Serial_Init(const std::string &port,uint32_t baud_rate) //串口初始化
 
 //error handle
 
-bool Serial_Transmit(uint8_t *buf,int len)
+bool Serial_Transmit(int num,uint8_t *buf,int len)
 {
-    if (sp.write(buf, len) == len)
+    if (sp[num].write(buf, len) == len)
     {
         return true;
     }
     return false;
 }
 
-int Serial_Receive(uint8_t *buf, uint8_t len)
+int Serial_Receive(int num,uint8_t *buf, uint8_t len)
 {
     try
     {
-        uint8_t num = len ? len : sp.available();
-        if (num && sp.available() >= num)
+        uint8_t num = len ? len : sp[num].available();
+        if (num && sp[num].available() >= num)
         {
-            return sp.read(buf, num);
+            return sp[num].read(buf, num);
         }
         return 0;
     }
@@ -79,5 +77,22 @@ int Serial_Receive(uint8_t *buf, uint8_t len)
         //ROS_INFO("read_until error");
         return 0;
     }
+}
+
+uint8_t crc_check(uint8_t *ptr, int len) 
+{
+    uint8_t  crc = 0x00;
+    while (len-->0)
+    {
+        crc = crc_table[crc ^ *ptr++];
+    }
+    return (crc);
+}
+
+uint16_t float64_to_uint16(double x, double x_min, double x_max){
+    /// Converts a float to an uint16, given range and numberW ///
+    double span = x_max - x_min;
+    double offset = x_min;
+    return (uint16_t) ((x-offset)*((double)((1<<16)-1))/span);
 }
 
